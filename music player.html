@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cinematic Stage Visualizer - Beat Synchronized Lights</title>
+    <meta name="theme-color" content="#0066ff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+            touch-action: none;
+        }
+
+        /* Main Canvas */
+        #stageCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Stage Container */
+        .stage-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #001133 0%, #000511 50%, #000000 100%);
+            z-index: 0;
+        }
+
+        /* Beat Indicator - Mobile Optimized */
+        .beat-indicator {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #0066ff;
+            border-radius: 25px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .beat-level {
+            font-size: 1em;
+            font-weight: bold;
+            color: #00ccff;
+            min-width: 60px;
+        }
+
+        .beat-level.high {
+            color: #ff0066;
+            text-shadow: 0 0 15px #ff0066;
+            animation: beatPulse 0.2s ease;
+        }
+
+        @keyframes beatPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .beat-bar {
+            width: 120px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .beat-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0066ff, #00ccff);
+            width: 0%;
+            transition: width 0.1s ease, background 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .beat-fill.high {
+            background: linear-gradient(90deg, #ff0066, #ff3366);
+            box-shadow: 0 0 15px #ff0066;
+        }
+
+        /* Bass Bars - Mobile Optimized */
+        .bass-bars {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .bass-bar {
+            width: 12px;
+            height: 60px;
+            background: linear-gradient(to top, #0066ff, #00ccff);
+            border-radius: 6px 6px 0 0;
+            transition: all 0.1s ease;
+            position: relative;
+        }
+
+        .bass-bar.red {
+            background: linear-gradient(to top, #ff0000, #ff6666);
+            box-shadow: 0 0 20px #ff0000;
+            animation: bassGlow 0.3s ease;
+        }
+
+        @keyframes bassGlow {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.2); }
+        }
+
+        /* Control Panel - Responsive */
+        .control-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 320px;
+            height: 100vh;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,20,40,0.95) 100%);
+            backdrop-filter: blur(20px);
+            border-left: 2px solid rgba(0, 102, 255, 0.3);
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 1000;
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .control-panel.collapsed {
+            transform: translateX(100%);
+        }
+
+        /* Mobile Bottom Panel */
+        @media (max-width: 768px) {
+            .control-panel {
+                width: 100%;
+                height: 50vh;
+                top: auto;
+                bottom: 0;
+                border-left: none;
+                border-top: 2px solid rgba(0, 102, 255, 0.3);
+                border-radius: 20px 20px 0 0;
+            }
+
+            .beat-indicator {
+                top: 5px;
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+
+            .beat-bar {
+                width: 80px;
+                height: 6px;
+            }
+
+            .bass-bars {
+                bottom: 55vh;
+                gap: 5px;
+                padding: 8px;
+            }
+
+            .bass-bar {
+                width: 8px;
+                height: 40px;
+            }
+        }
+
+        /* Toggle Button - Mobile Optimized */
+        .panel-toggle {
+            position: fixed;
+            right: 320px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #0066ff, #00ccff);
+            border: none;
+            border-radius: 10px 0 0 10px;
+            padding: 15px 8px;
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s ease;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .panel-toggle {
+                right: auto;
+                left: 50%;
+                top: auto;
+                bottom: 50vh;
+                transform: translateX(-50%);
+                border-radius: 20px 20px 0 0;
+                padding: 10px 20px;
+                writing-mode: horizontal-tb;
+            }
+        }
+
+        .panel-toggle:hover {
+            padding-right: 15px;
+            box-shadow: -5px 0 20px rgba(0, 102, 255, 0.5);
+        }
+
+        .panel-toggle.collapsed {
+            right: 0;
+        }
+
+        @media (max-width: 768px) {
+            .panel-toggle.collapsed {
+                bottom: 0;
+            }
+        }
+
+        /* Audio Controls - Mobile Optimized */
+        .audio-section {
+            background: rgba(0, 102, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 102, 255, 0.2);
+        }
+
+        .section-title {
+            color: #00ccff;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-label {
+            display: block;
+            padding: 12px;
+            background: linear-gradient(135deg, #0066ff, #00ccff);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .file-upload-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 102, 255, 0.4);
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 10px;
+            background: linear-gradient(135deg, #0066ff, #004499);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 102, 255, 0.4);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-btn.playing {
+            background: linear-gradient(135deg, #00ff00, #00cc00);
+        }
+
+        .control-btn.paused {
+            background: linear-gradient(135deg, #ffaa00, #ff8800);
+        }
+
+        /* Track Info - Mobile Optimized */
+        .track-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .track-name {
+            color: #00ccff;
+            font-weight: bold;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 13px;
+        }
+
+        .track-time {
+            display: flex;
+            justify-content: space-between;
+            color: #a0a0ff;
+            font-size: 0.8em;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0066ff, #00ccff);
+            width: 0%;
+            transition: width 0.1s ease;
+            border-radius: 3px;
+        }
+
+        /* Volume Control - Mobile */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .volume-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #00ccff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-label {
+            color: #a0a0ff;
+            font-size: 0.8em;
+            min-width: 35px;
+        }
+
+        /* Light Controls - Mobile */
+        .light-controls {
+            background: rgba(0, 204, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 204, 255, 0.2);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            color: #a0a0ff;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #0066ff, #00ccff);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: right;
+            color: #00ccff;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        /* Presets - Mobile */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .preset-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85em;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0, 102, 255, 0.2);
+            border-color: #0066ff;
+            transform: translateY(-2px);
+        }
+
+        /* Stage Info - Mobile */
+        .stage-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 102, 255, 0.3);
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        @media (max-width: 768px) {
+            .stage-info {
+                bottom: 5px;
+                left: 5px;
+                padding: 8px;
+                font-size: 0.8em;
+            }
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+            font-size: 0.85em;
+        }
+
+        .info-label {
+            color: #a0a0ff;
+        }
+
+        .info-value {
+            color: #00ccff;
+            font-weight: bold;
+        }
+
+        /* Frequency Bars - Mobile */
+        .frequency-bars {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 320px;
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            padding: 8px;
+            gap: 1px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        @media (max-width: 768px) {
+            .frequency-bars {
+                right: 0;
+                bottom: 50vh;
+                height: 40px;
+                padding: 5px;
+            }
+        }
+
+        .freq-bar {
+            flex: 1;
+            background: linear-gradient(to top, #0066ff, #00ccff);
+            border-radius: 1px 1px 0 0;
+            transition: height 0.05s ease;
+            min-height: 1px;
+            opacity: 0.8;
+        }
+
+        .freq-bar.high {
+            background: linear-gradient(to top, #ff0066, #ff3366);
+            opacity: 1;
+            box-shadow: 0 0 8px #ff0066;
+        }
+
+        /* Loading Screen - Mobile */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .stage-loader {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .stage-loader {
+                width: 60px;
+                height: 60px;
+            }
+        }
+
+        .light-beam {
+            position: absolute;
+            width: 3px;
+            height: 40px;
+            background: linear-gradient(to bottom, transparent, #00ccff);
+            top: 0;
+            left: 50%;
+            transform-origin: bottom center;
+            animation: rotateBeam 2s linear infinite;
+        }
+
+        .light-beam:nth-child(1) { transform: translateX(-50%) rotate(0deg); }
+        .light-beam:nth-child(2) { transform: translateX(-50%) rotate(45deg); animation-delay: 0.25s; }
+        .light-beam:nth-child(3) { transform: translateX(-50%) rotate(90deg); animation-delay: 0.5s; }
+        .light-beam:nth-child(4) { transform: translateX(-50%) rotate(135deg); animation-delay: 0.75s; }
+        .light-beam:nth-child(5) { transform: translateX(-50%) rotate(180deg); animation-delay: 1s; }
+        .light-beam:nth-child(6) { transform: translateX(-50%) rotate(225deg); animation-delay: 1.25s; }
+        .light-beam:nth-child(7) { transform: translateX(-50%) rotate(270deg); animation-delay: 1.5s; }
+        .light-beam:nth-child(8) { transform: translateX(-50%) rotate(315deg); animation-delay: 1.75s; }
+
+        @keyframes rotateBeam {
+            from { opacity: 0.3; }
+            50% { opacity: 1; }
+            to { opacity: 0.3; }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: #00ccff;
+            font-size: 1em;
+            animation: fadeInOut 2s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+            .loading-text {
+                font-size: 0.9em;
+                margin-top: 15px;
+            }
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Notification - Mobile */
+        .notification {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(0, 255, 0, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .notification {
+                top: 60px;
+                padding: 10px 15px;
+                font-size: 0.8em;
+            }
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .notification.error {
+            background: rgba(255, 0, 0, 0.9);
+        }
+
+        /* Shaking Animation for High Bass */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shaking {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Performance Optimizations */
+        .gpu-accelerated {
+            transform: translateZ(0);
+            will-change: transform;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="stage-loader">
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+            <div class="light-beam"></div>
+        </div>
+        <div class="loading-text">Stage Loading...</div>
+    </div>
+
+    <!-- Stage Container -->
+    <div class="stage-container"></div>
+    
+    <!-- Main Canvas -->
+    <canvas id="stageCanvas" class="gpu-accelerated"></canvas>
+
+    <!-- Beat Indicator -->
+    <div class="beat-indicator">
+        <div class="beat-level" id="beatLevel">BEAT: 0</div>
+        <div class="beat-bar">
+            <div class="beat-fill" id="beatFill"></div>
+        </div>
+    </div>
+
+    <!-- Bass Bars -->
+    <div class="bass-bars" id="bassBars">
+        <div class="bass-bar"></div>
+        <div class="bass-bar"></div>
+        <div class="bass-bar"></div>
+        <div class="bass-bar"></div>
+    </div>
+
+    <!-- Frequency Bars -->
+    <div class="frequency-bars" id="frequencyBars"></div>
+
+    <!-- Stage Info -->
+    <div class="stage-info">
+        <div class="info-item">
+            <span class="info-label">Lights:</span>
+            <span class="info-value" id="lightCount">8</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Speed:</span>
+            <span class="info-value" id="rotationSpeed">1.0x</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Status:</span>
+            <span class="info-value" id="audioStatus">Ready</span>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <!-- Control Panel -->
+    <div class="control-panel" id="controlPanel">
+        <!-- Audio Section -->
+        <div class="audio-section">
+            <h3 class="section-title">🎵 Audio Control</h3>
+            <div class="file-upload">
+                <input type="file" id="audioFile" accept="audio/*">
+                <label for="audioFile" class="file-upload-label">Choose Music File</label>
+            </div>
+            
+            <div class="track-info" id="trackInfo" style="display: none;">
+                <div class="track-name" id="trackName">No track loaded</div>
+                <div class="track-time">
+                    <span id="currentTime">0:00</span>
+                    <span id="duration">0:00</span>
+                </div>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+            
+            <div class="audio-controls">
+                <button class="control-btn" id="playBtn">▶ Play</button>
+                <button class="control-btn" id="pauseBtn">⏸ Pause</button>
+                <button class="control-btn" id="stopBtn">⏹ Stop</button>
+            </div>
+            
+            <div class="volume-control">
+                <span class="volume-label">🔊</span>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                <span class="volume-label" id="volumeLabel">70%</span>
+            </div>
+        </div>
+
+        <!-- Light Controls -->
+        <div class="light-controls">
+            <h3 class="section-title">💡 Stage Lights</h3>
+            
+            <div class="control-group">
+                <label class="control-label">Number of Lights</label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="lightCountSlider" min="4" max="16" value="8">
+                    <span class="slider-value" id="lightCountValue">8</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Light Intensity</label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="lightIntensity" min="0" max="100" value="70">
+                    <span class="slider-value" id="lightIntensityValue">70%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Beam Width</label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="beamWidth" min="10" max="100" value="40">
+                    <span class="slider-value" id="beamWidthValue">40</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Rotation Speed</label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="rotationSpeedSlider" min="0" max="5" step="0.1" value="1">
+                    <span class="slider-value" id="rotationSpeedValue">1.0</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Fog Density</label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="fogDensity" min="0" max="100" value="30">
+                    <span class="slider-value" id="fogDensityValue">30%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="light-controls">
+            <h3 class="section-title">🎭 Stage Presets</h3>
+            <div class="preset-grid">
+                <button class="preset-btn" data-preset="concert">Concert</button>
+                <button class="preset-btn" data-preset="club">Club</button>
+                <button class="preset-btn" data-preset="theater">Theater</button>
+                <button class="preset-btn" data-preset="festival">Festival</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Toggle -->
+    <button class="panel-toggle" id="panelToggle">Controls</button>
+
+    <script>
+        class CinematicStageVisualizer {
+            constructor() {
+                this.canvas = document.getElementById('stageCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.audioContext = null;
+                this.analyser = null;
+                this.source = null;
+                this.audio = null;
+                this.dataArray = null;
+                this.bufferLength = null;
+                this.isPlaying = false;
+                this.isPaused = false;
+                
+                // Stage properties
+                this.stageLights = [];
+                this.particles = [];
+                this.fogParticles = [];
+                this.rotation = 0;
+                this.beatLevel = 0;
+                this.bassLevels = [0, 0, 0, 0]; // Track last 4 bass levels
+                this.time = 0;
+                this.shakeIntensity = 0;
+                
+                // Settings
+                this.settings = {
+                    lightCount: 8,
+                    lightIntensity: 70,
+                    beamWidth: 40,
+                    rotationSpeed: 1,
+                    fogDensity: 30,
+                    beatThreshold: 90
+                };
+                
+                // Mobile detection
+                this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                this.init();
+            }
+
+            init() {
+                this.setupCanvas();
+                this.setupAudio();
+                this.setupEventListeners();
+                this.createFrequencyBars();
+                this.initializeStage();
+                this.optimizeForMobile();
+                this.animate();
+                
+                // Hide loading screen
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                }, 1500);
+            }
+
+            optimizeForMobile() {
+                if (this.isMobile) {
+                    // Reduce particle count for mobile
+                    this.settings.fogDensity = Math.min(this.settings.fogDensity, 20);
+                    this.settings.lightCount = Math.min(this.settings.lightCount, 8);
+                    
+                    // Optimize canvas for mobile
+                    this.canvas.style.imageRendering = 'optimizeSpeed';
+                    
+                    // Disable some effects for better performance
+                    this.ctx.imageSmoothingEnabled = false;
+                }
+            }
+
+            setupCanvas() {
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // Handle orientation change
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => this.resizeCanvas(), 100);
+                });
+            }
+
+            resizeCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = this.canvas.getBoundingClientRect();
+                
+                // Use lower resolution on mobile for performance
+                const scale = this.isMobile ? 0.5 : 1;
+                
+                this.canvas.width = rect.width * dpr * scale;
+                this.canvas.height = rect.height * dpr * scale;
+                
+                this.ctx.scale(dpr * scale, dpr * scale);
+                
+                this.canvas.style.width = rect.width + 'px';
+                this.canvas.style.height = rect.height + 'px';
+                
+                this.centerX = rect.width / 2;
+                this.centerY = rect.height / 2;
+                this.stageRadius = Math.min(rect.width, rect.height) * 0.3;
+            }
+
+            setupAudio() {
+                // Create audio context on user interaction
+                const initAudio = () => {
+                    if (!this.audioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        this.analyser = this.audioContext.createAnalyser();
+                        this.analyser.fftSize = this.isMobile ? 128 : 256; // Smaller FFT for mobile
+                        this.bufferLength = this.analyser.frequencyBinCount;
+                        this.dataArray = new Uint8Array(this.bufferLength);
+                    }
+                };
+                
+                document.addEventListener('click', initAudio, { once: true });
+                document.addEventListener('touchstart', initAudio, { once: true });
+            }
+
+            setupEventListeners() {
+                // Audio controls
+                document.getElementById('audioFile').addEventListener('change', (e) => this.loadAudio(e));
+                document.getElementById('playBtn').addEventListener('click', () => this.play());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                
+                // Progress bar
+                document.getElementById('progressBar').addEventListener('click', (e) => this.seek(e));
+                
+                // Volume control
+                document.getElementById('volumeSlider').addEventListener('input', (e) => {
+                    const volume = e.target.value / 100;
+                    if (this.audio) {
+                        this.audio.volume = volume;
+                    }
+                    document.getElementById('volumeLabel').textContent = e.target.value + '%';
+                });
+                
+                // Audio events
+                this.setupAudioEvents();
+                
+                // Panel toggle
+                document.getElementById('panelToggle').addEventListener('click', () => {
+                    document.getElementById('controlPanel').classList.toggle('collapsed');
+                    document.getElementById('panelToggle').classList.toggle('collapsed');
+                });
+                
+                // Light controls
+                document.getElementById('lightCountSlider').addEventListener('input', (e) => {
+                    this.settings.lightCount = parseInt(e.target.value);
+                    document.getElementById('lightCountValue').textContent = e.target.value;
+                    document.getElementById('lightCount').textContent = e.target.value;
+                    this.initializeStage();
+                });
+                
+                document.getElementById('lightIntensity').addEventListener('input', (e) => {
+                    this.settings.lightIntensity = parseInt(e.target.value);
+                    document.getElementById('lightIntensityValue').textContent = e.target.value + '%';
+                });
+                
+                document.getElementById('beamWidth').addEventListener('input', (e) => {
+                    this.settings.beamWidth = parseInt(e.target.value);
+                    document.getElementById('beamWidthValue').textContent = e.target.value;
+                });
+                
+                document.getElementById('rotationSpeedSlider').addEventListener('input', (e) => {
+                    this.settings.rotationSpeed = parseFloat(e.target.value);
+                    document.getElementById('rotationSpeedValue').textContent = e.target.value;
+                    document.getElementById('rotationSpeed').textContent = e.target.value + 'x';
+                });
+                
+                document.getElementById('fogDensity').addEventListener('input', (e) => {
+                    this.settings.fogDensity = parseInt(e.target.value);
+                    document.getElementById('fogDensityValue').textContent = e.target.value + '%';
+                    this.initializeFog();
+                });
+                
+                // Presets
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.applyPreset(btn.dataset.preset));
+                });
+            }
+
+            setupAudioEvents() {
+                // These will be set when audio is loaded
+            }
+
+            createFrequencyBars() {
+                const container = document.getElementById('frequencyBars');
+                const barCount = this.isMobile ? 16 : 32;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'freq-bar';
+                    container.appendChild(bar);
+                }
+                this.freqBars = container.querySelectorAll('.freq-bar');
+            }
+
+            async loadAudio(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                try {
+                    this.showNotification('Loading audio file...');
+                    
+                    // Show track info
+                    document.getElementById('trackInfo').style.display = 'block';
+                    document.getElementById('trackName').textContent = file.name;
+                    
+                    const fileURL = URL.createObjectURL(file);
+                    
+                    // Clean up previous audio
+                    if (this.audio) {
+                        this.audio.pause();
+                        this.audio.remove();
+                        if (this.source) {
+                            this.source.disconnect();
+                        }
+                    }
+                    
+                    // Create new audio element
+                    this.audio = new Audio(fileURL);
+                    this.audio.volume = document.getElementById('volumeSlider').value / 100;
+                    
+                    // Setup audio context if not already done
+                    if (!this.audioContext) {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        this.analyser = this.audioContext.createAnalyser();
+                        this.analyser.fftSize = this.isMobile ? 128 : 256;
+                        this.bufferLength = this.analyser.frequencyBinCount;
+                        this.dataArray = new Uint8Array(this.bufferLength);
+                    }
+                    
+                    // Connect audio to analyser
+                    this.source = this.audioContext.createMediaElementSource(this.audio);
+                    this.source.connect(this.analyser);
+                    this.analyser.connect(this.audioContext.destination);
+                    
+                    // Setup audio events
+                    this.setupAudioElementEvents();
+                    
+                    // Enable controls
+                    document.getElementById('playBtn').disabled = false;
+                    document.getElementById('pauseBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = false;
+                    
+                    this.showNotification('Audio loaded successfully!');
+                    
+                } catch (error) {
+                    console.error('Error loading audio:', error);
+                    this.showNotification('Error loading audio file', true);
+                }
+            }
+
+            setupAudioElementEvents() {
+                // Update time display
+                this.audio.addEventListener('timeupdate', () => {
+                    this.updateTimeDisplay();
+                });
+                
+                // Update duration when metadata is loaded
+                this.audio.addEventListener('loadedmetadata', () => {
+                    this.updateTimeDisplay();
+                });
+                
+                // Handle audio end
+                this.audio.addEventListener('ended', () => {
+                    this.isPlaying = false;
+                    this.isPaused = false;
+                    this.updateButtonStates();
+                    document.getElementById('audioStatus').textContent = 'Ended';
+                });
+                
+                // Handle audio errors
+                this.audio.addEventListener('error', (e) => {
+                    console.error('Audio error:', e);
+                    this.showNotification('Audio playback error', true);
+                    this.isPlaying = false;
+                    this.isPaused = false;
+                    this.updateButtonStates();
+                });
+            }
+
+            updateTimeDisplay() {
+                if (!this.audio) return;
+                
+                const current = this.formatTime(this.audio.currentTime);
+                const duration = this.formatTime(this.audio.duration);
+                
+                document.getElementById('currentTime').textContent = current;
+                document.getElementById('duration').textContent = duration;
+                
+                // Update progress bar
+                const progress = (this.audio.currentTime / this.audio.duration) * 100;
+                document.getElementById('progressFill').style.width = progress + '%';
+            }
+
+            formatTime(seconds) {
+                if (isNaN(seconds)) return '0:00';
+                
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            seek(event) {
+                if (!this.audio) return;
+                
+                const progressBar = document.getElementById('progressBar');
+                const clickX = event.offsetX;
+                const width = progressBar.offsetWidth;
+                const percentage = clickX / width;
+                
+                this.audio.currentTime = percentage * this.audio.duration;
+            }
+
+            play() {
+                if (!this.audio) {
+                    this.showNotification('Please load an audio file first', true);
+                    return;
+                }
+                
+                // Resume audio context if suspended
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+                
+                this.audio.play()
+                    .then(() => {
+                        this.isPlaying = true;
+                        this.isPaused = false;
+                        this.updateButtonStates();
+                        document.getElementById('audioStatus').textContent = 'Playing';
+                        this.showNotification('Playing audio');
+                    })
+                    .catch(error => {
+                        console.error('Play error:', error);
+                        this.showNotification('Error playing audio', true);
+                    });
+            }
+
+            pause() {
+                if (!this.audio || !this.isPlaying) return;
+                
+                this.audio.pause();
+                this.isPlaying = false;
+                this.isPaused = true;
+                this.updateButtonStates();
+                document.getElementById('audioStatus').textContent = 'Paused';
+                this.showNotification('Audio paused');
+            }
+
+            stop() {
+                if (!this.audio) return;
+                
+                this.audio.pause();
+                this.audio.currentTime = 0;
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.updateButtonStates();
+                document.getElementById('audioStatus').textContent = 'Stopped';
+                this.updateTimeDisplay();
+                this.showNotification('Audio stopped');
+            }
+
+            updateButtonStates() {
+                const playBtn = document.getElementById('playBtn');
+                const pauseBtn = document.getElementById('pauseBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                
+                // Update play button
+                if (this.isPlaying) {
+                    playBtn.classList.add('playing');
+                    playBtn.textContent = '▶ Playing';
+                } else {
+                    playBtn.classList.remove('playing');
+                    playBtn.textContent = '▶ Play';
+                }
+                
+                // Update pause button
+                if (this.isPaused) {
+                    pauseBtn.classList.add('paused');
+                    pauseBtn.textContent = '▶ Resume';
+                } else {
+                    pauseBtn.classList.remove('paused');
+                    pauseBtn.textContent = '⏸ Pause';
+                }
+                
+                // Enable/disable based on state
+                playBtn.disabled = !this.audio || this.isPlaying;
+                pauseBtn.disabled = !this.audio || !this.isPlaying;
+                stopBtn.disabled = !this.audio;
+            }
+
+            showNotification(message, isError = false) {
+                const notification = document.getElementById('notification');
+                notification.textContent = message;
+                notification.classList.toggle('error', isError);
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            initializeStage() {
+                this.stageLights = [];
+                for (let i = 0; i < this.settings.lightCount; i++) {
+                    const angle = (i / this.settings.lightCount) * Math.PI * 2;
+                    this.stageLights.push({
+                        angle: angle,
+                        height: 200,
+                        targetHeight: 200,
+                        color: `hsl(${200 + i * 20}, 100%, 50%)`,
+                        intensity: 1,
+                        targetIntensity: 1,
+                        beamWidth: this.settings.beamWidth,
+                        on: true
+                    });
+                }
+                this.initializeFog();
+            }
+
+            initializeFog() {
+                this.fogParticles = [];
+                const particleCount = Math.floor(this.settings.fogDensity * (this.isMobile ? 1 : 2));
+                for (let i = 0; i < particleCount; i++) {
+                    this.fogParticles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 50 + 20,
+                        opacity: Math.random() * 0.3 + 0.1,
+                        speed: Math.random() * 0.5 + 0.1
+                    });
+                }
+            }
+
+            analyzeAudio() {
+                if (!this.analyser || !this.isPlaying) return null;
+                
+                this.analyser.getByteFrequencyData(this.dataArray);
+                
+                // Calculate bass levels (4 bass bars)
+                let bassSum = 0;
+                let bassLevels = [];
+                const bassRange = Math.floor(this.bufferLength / 8);
+                
+                for (let i = 0; i < 4; i++) {
+                    let sum = 0;
+                    for (let j = i * bassRange; j < (i + 1) * bassRange; j++) {
+                        sum += this.dataArray[j];
+                    }
+                    const level = (sum / bassRange / 255) * 100;
+                    bassLevels.push(level);
+                    bassSum += level;
+                }
+                
+                // Update bass bars
+                const bassBars = document.querySelectorAll('.bass-bar');
+                bassBars.forEach((bar, index) => {
+                    const level = bassLevels[index];
+                    bar.style.height = `${Math.max(10, level)}%`;
+                    
+                    if (level > 90) {
+                        bar.classList.add('red');
+                    } else {
+                        bar.classList.remove('red');
+                    }
+                });
+                
+                // Check if 4 or more bass bars are red
+                const redBars = bassLevels.filter(level => level > 90).length;
+                const shouldShake = redBars >= 4;
+                
+                // Update shake intensity
+                if (shouldShake) {
+                    this.shakeIntensity = Math.min(this.shakeIntensity + 0.1, 1);
+                } else {
+                    this.shakeIntensity = Math.max(this.shakeIntensity - 0.05, 0);
+                }
+                
+                // Apply shake to canvas
+                if (this.shakeIntensity > 0) {
+                    this.canvas.classList.add('shaking');
+                } else {
+                    this.canvas.classList.remove('shaking');
+                }
+                
+                // Calculate overall beat level
+                let sum = 0;
+                let trebleSum = 0;
+                
+                for (let i = 0; i < this.bufferLength; i++) {
+                    sum += this.dataArray[i];
+                    if (i > this.bufferLength - 10) trebleSum += this.dataArray[i];
+                }
+                
+                const average = sum / this.bufferLength;
+                this.beatLevel = Math.round((average / 255) * 100);
+                
+                // Update beat indicator
+                const beatLevelEl = document.getElementById('beatLevel');
+                const beatFillEl = document.getElementById('beatFill');
+                
+                beatLevelEl.textContent = `BEAT: ${this.beatLevel}`;
+                beatFillEl.style.width = `${this.beatLevel}%`;
+                
+                if (this.beatLevel > this.settings.beatThreshold) {
+                    beatLevelEl.classList.add('high');
+                    beatFillEl.classList.add('high');
+                } else {
+                    beatLevelEl.classList.remove('high');
+                    beatFillEl.classList.remove('high');
+                }
+                
+                // Update frequency bars
+                this.freqBars.forEach((bar, index) => {
+                    const value = this.dataArray[Math.floor(index * this.bufferLength / this.freqBars.length)];
+                    const height = (value / 255) * 100;
+                    bar.style.height = `${height}%`;
+                    
+                    if (value > 200) {
+                        bar.classList.add('high');
+                    } else {
+                        bar.classList.remove('high');
+                    }
+                });
+                
+                return { 
+                    bass: bassSum / 4, 
+                    treble: trebleSum / 10, 
+                    beat: this.beatLevel,
+                    bassLevels: bassLevels,
+                    shouldShake: shouldShake,
+                    shakeIntensity: this.shakeIntensity
+                };
+            }
+
+            drawStage() {
+                // Clear canvas
+                this.ctx.fillStyle = 'rgba(0, 5, 17, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Apply shake transform
+                if (this.shakeIntensity > 0) {
+                    const shakeX = (Math.random() - 0.5) * this.shakeIntensity * 10;
+                    const shakeY = (Math.random() - 0.5) * this.shakeIntensity * 10;
+                    this.ctx.save();
+                    this.ctx.translate(shakeX, shakeY);
+                }
+                
+                // Draw fog
+                this.drawFog();
+                
+                // Draw stage floor
+                this.drawStageFloor();
+                
+                // Draw lights
+                this.drawLights();
+                
+                // Draw light beams
+                this.drawLightBeams();
+                
+                // Draw particles
+                this.drawParticles();
+                
+                // Restore shake transform
+                if (this.shakeIntensity > 0) {
+                    this.ctx.restore();
+                }
+            }
+
+            drawFog() {
+                this.fogParticles.forEach(particle => {
+                    const gradient = this.ctx.createRadialGradient(
+                        particle.x, particle.y, 0,
+                        particle.x, particle.y, particle.size
+                    );
+                    gradient.addColorStop(0, `rgba(150, 150, 200, ${particle.opacity})`);
+                    gradient.addColorStop(1, 'transparent');
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.fillRect(
+                        particle.x - particle.size,
+                        particle.y - particle.size,
+                        particle.size * 2,
+                        particle.size * 2
+                    );
+                    
+                    // Move fog
+                    particle.x += Math.sin(this.time * 0.001 + particle.y * 0.01) * particle.speed;
+                    particle.y += Math.cos(this.time * 0.001 + particle.x * 0.01) * particle.speed * 0.5;
+                    
+                    // Wrap around
+                    if (particle.x < -particle.size) particle.x = this.canvas.width + particle.size;
+                    if (particle.x > this.canvas.width + particle.size) particle.x = -particle.size;
+                    if (particle.y < -particle.size) particle.y = this.canvas.height + particle.size;
+                    if (particle.y > this.canvas.height + particle.size) particle.y = -particle.size;
+                });
+            }
+
+            drawStageFloor() {
+                const gradient = this.ctx.createRadialGradient(
+                    this.centerX, this.centerY, 0,
+                    this.centerX, this.centerY, this.stageRadius * 2
+                );
+                gradient.addColorStop(0, 'rgba(0, 20, 40, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(0, 10, 30, 0.6)');
+                gradient.addColorStop(1, 'transparent');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.ellipse(this.centerX, this.centerY, this.stageRadius * 2, this.stageRadius, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Draw stage reflection
+                this.ctx.save();
+                this.ctx.scale(1, -0.3);
+                this.ctx.translate(0, -this.canvas.height * 2);
+                
+                this.stageLights.forEach(light => {
+                    if (!light.on) return;
+                    
+                    const x = this.centerX + Math.cos(light.angle + this.rotation) * this.stageRadius;
+                    const y = this.centerY + Math.sin(light.angle + this.rotation) * this.stageRadius * 0.5;
+                    
+                    const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, 50);
+                    gradient.addColorStop(0, `rgba(100, 150, 255, ${light.intensity * 0.3})`);
+                    gradient.addColorStop(1, 'transparent');
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 50, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                this.ctx.restore();
+            }
+
+            drawLights() {
+                this.stageLights.forEach((light, index) => {
+                    if (!light.on) return;
+                    
+                    const x = this.centerX + Math.cos(light.angle + this.rotation) * this.stageRadius;
+                    const y = this.centerY + Math.sin(light.angle + this.rotation) * this.stageRadius * 0.5;
+                    
+                    // Light fixture
+                    const gradient = this.ctx.createRadialGradient(x, y, 0, x, y, 20);
+                    gradient.addColorStop(0, light.color);
+                    gradient.addColorStop(0.5, light.color);
+                    gradient.addColorStop(1, 'transparent');
+                    
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 20 * light.intensity, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Light glow
+                    this.ctx.shadowBlur = 30 * light.intensity;
+                    this.ctx.shadowColor = light.color;
+                    this.ctx.fillStyle = light.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 10, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
+                });
+            }
+
+            drawLightBeams() {
+                this.stageLights.forEach(light => {
+                    if (!light.on) return;
+                    
+                    const x = this.centerX + Math.cos(light.angle + this.rotation) * this.stageRadius;
+                    const y = this.centerY + Math.sin(light.angle + this.rotation) * this.stageRadius * 0.5;
+                    
+                    this.ctx.save();
+                    this.ctx.translate(x, y);
+                    this.ctx.rotate(light.angle + this.rotation + Math.PI / 2);
+                    
+                    // Create beam gradient
+                    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                    gradient.addColorStop(0, `rgba(100, 150, 255, ${light.intensity * 0.8})`);
+                    gradient.addColorStop(0.3, `rgba(100, 150, 255, ${light.intensity * 0.4})`);
+                    gradient.addColorStop(1, 'transparent');
+                    
+                    // Draw beam
+                    this.ctx.fillStyle = gradient;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-light.beamWidth / 2, 0);
+                    this.ctx.lineTo(light.beamWidth / 2, 0);
+                    this.ctx.lineTo(light.beamWidth * 2, this.canvas.height);
+                    this.ctx.lineTo(-light.beamWidth * 2, this.canvas.height);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    
+                    // Add beam glow
+                    this.ctx.shadowBlur = 50 * light.intensity;
+                    this.ctx.shadowColor = light.color;
+                    this.ctx.strokeStyle = `rgba(255, 255, 255, ${light.intensity * 0.3})`;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    this.ctx.restore();
+                });
+            }
+
+            drawParticles() {
+                // Add new particles on high beat
+                if (this.beatLevel > this.settings.beatThreshold && Math.random() > 0.7) {
+                    const particleCount = this.isMobile ? 2 : 5;
+                    for (let i = 0; i < particleCount; i++) {
+                        this.particles.push({
+                            x: this.centerX + (Math.random() - 0.5) * this.stageRadius * 2,
+                            y: this.centerY,
+                            vx: (Math.random() - 0.5) * 10,
+                            vy: -Math.random() * 10 - 5,
+                            size: Math.random() * 3 + 1,
+                            life: 1,
+                            color: `hsl(${Math.random() * 60 + 180}, 100%, 70%)`
+                        });
+                    }
+                }
+                
+                // Update and draw particles
+                this.particles = this.particles.filter(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.3; // gravity
+                    particle.life -= 0.02;
+                    
+                    if (particle.life <= 0) return false;
+                    
+                    this.ctx.fillStyle = particle.color;
+                    this.ctx.globalAlpha = particle.life;
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1;
+                    
+                    return particle.y < this.canvas.height;
+                });
+            }
+
+            updateLights(audioData) {
+                const isHighBeat = audioData.beat > this.settings.beatThreshold;
+                const isShaking = audioData.shouldShake;
+                const shakeIntensity = audioData.shakeIntensity;
+                
+                // Calculate speed based on shake intensity
+                const speedMultiplier = isShaking ? (1 + shakeIntensity * 3) : 1;
+                
+                // Update rotation
+                this.rotation += (this.settings.rotationSpeed * speedMultiplier * 0.01);
+                
+                // Update lights
+                this.stageLights.forEach((light, index) => {
+                    // Light on/off based on bass levels
+                    if (audioData.bassLevels && audioData.bassLevels[index % 4] > 90) {
+                        light.on = true;
+                        light.targetIntensity = 1 + Math.random() * 0.5;
+                    } else if (isShaking) {
+                        light.on = Math.random() > 0.3; // 70% chance to be on during shake
+                        light.targetIntensity = 0.5 + Math.random() * 0.5;
+                    } else {
+                        light.on = true;
+                        light.targetIntensity = 0.7 + Math.sin(this.time * 0.002 + index * 0.5) * 0.3;
+                    }
+                    
+                    // Smooth height animation
+                    light.targetHeight = isShaking ? 
+                        100 + Math.random() * 150 : 
+                        180 + Math.sin(this.time * 0.001 + index) * 20;
+                    light.height += (light.targetHeight - light.height) * 0.1;
+                    
+                    // Smooth intensity animation
+                    light.intensity += (light.targetIntensity - light.intensity) * 0.1;
+                    
+                    // Update beam width
+                    light.beamWidth = this.settings.beamWidth * (isShaking ? 1.5 : 1);
+                    
+                    // Update color based on beat
+                    if (isShaking) {
+                        const hue = (this.time * 5 + index * 45) % 360;
+                        light.color = `hsl(${hue}, 100%, 60%)`;
+                    } else {
+                        light.color = `hsl(${200 + index * 20}, 100%, 50%)`;
+                    }
+                });
+            }
+
+            applyPreset(preset) {
+                const presets = {
+                    concert: {
+                        lightCount: this.isMobile ? 8 : 12,
+                        lightIntensity: 90,
+                        beamWidth: 60,
+                        rotationSpeed: 2,
+                        fogDensity: 40
+                    },
+                    club: {
+                        lightCount: 8,
+                        lightIntensity: 100,
+                        beamWidth: 80,
+                        rotationSpeed: 3,
+                        fogDensity: 60
+                    },
+                    theater: {
+                        lightCount: 6,
+                        lightIntensity: 60,
+                        beamWidth: 30,
+                        rotationSpeed: 0.5,
+                        fogDensity: 20
+                    },
+                    festival: {
+                        lightCount: this.isMobile ? 8 : 16,
+                        lightIntensity: 100,
+                        beamWidth: 100,
+                        rotationSpeed: 4,
+                        fogDensity: 50
+                    }
+                };
+                
+                if (presets[preset]) {
+                    Object.assign(this.settings, presets[preset]);
+                    
+                    // Update UI
+                    document.getElementById('lightCountSlider').value = this.settings.lightCount;
+                    document.getElementById('lightCountValue').textContent = this.settings.lightCount;
+                    document.getElementById('lightCount').textContent = this.settings.lightCount;
+                    
+                    document.getElementById('lightIntensity').value = this.settings.lightIntensity;
+                    document.getElementById('lightIntensityValue').textContent = this.settings.lightIntensity + '%';
+                    
+                    document.getElementById('beamWidth').value = this.settings.beamWidth;
+                    document.getElementById('beamWidthValue').textContent = this.settings.beamWidth;
+                    
+                    document.getElementById('rotationSpeedSlider').value = this.settings.rotationSpeed;
+                    document.getElementById('rotationSpeedValue').textContent = this.settings.rotationSpeed;
+                    document.getElementById('rotationSpeed').textContent = this.settings.rotationSpeed + 'x';
+                    
+                    document.getElementById('fogDensity').value = this.settings.fogDensity;
+                    document.getElementById('fogDensityValue').textContent = this.settings.fogDensity + '%';
+                    
+                    this.initializeStage();
+                    this.showNotification(`Applied ${preset} preset`);
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                this.time++;
+                
+                // Analyze audio
+                const audioData = this.analyzeAudio();
+                
+                // Update lights based on audio
+                if (audioData) {
+                    this.updateLights(audioData);
+                }
+                
+                // Draw everything
+                this.drawStage();
+            }
+        }
+
+        // Initialize the visualizer
+        const stageVisualizer = new CinematicStageVisualizer();
+    </script>
+</body>
+</html>
